@@ -6,85 +6,40 @@
     <a href="#" onClick="useBluetooth()">Web Bluetooth</a>
 
     <script type="text/javascript">
-      const handleHeartRateChanged = function (event) {
-        console.log(event);
-        console.log(event.currentTarget.value.getUint8(0));
-
-        // event.currentTarget.readValue()
-        // .then( function (value) {
-        //   console.log('read value start');
-        //   console.log(value);
-        //   console.log('read value end');
-        // });
-      }
-
-      function handleCustomCharacteristic(characteristic) {
-        return characteristic.startNotifications()
-        .then(char => {
-          characteristic.addEventListener('characteristicvaluechanged', onCustomValueChanged);
-        });
-      }
-
-      function onCustomValueChanged(event) {
-        let characteristic = event.target;
-        console.log(parseCustomValue(characteristic.value));
-      }
-
-      function parseCustomValue(data) {
-        return data;
-      }
-
-      var customService = null;
+      const BACKGROUND_COLOR_SERVICE_ID = '9f729a95-52d3-58cf-73f0-db454f77650c';
+      const RED_CHANNEL_CHARACTERISTIC_ID = 'f21bd22e-be20-4e3b-f49b-4b94a90979b7';
+      const GREEN_CHANNEL_CHARACTERISTIC_ID = '3325bcba-24ea-690d-0a49-5655cfaa73ff';
+      const BLUE_CHANNEL_CHARACTERISTIC_ID = '8f0aacb-4dd3-cb36-0bd2-2f3b0a27f4f2';
 
       const useBluetooth = function () {
         console.log('Starting with Web Bluetooth API');
 
-        var heartRateCharacteristic;
-
-        // Step 1: Scan for a device with 0xffe5 service
         navigator.bluetooth.requestDevice({
           filters: [
-            { services: ['9f729a95-52d3-58cf-73f0-db454f77650c'] },
+            { services: [BACKGROUND_COLOR_SERVICE_ID] },
           ]
         })
-        .then(device => { return device.gatt.connect(); })
-        .then(server => { return server.getPrimaryService('9f729a95-52d3-58cf-73f0-db454f77650c') })
-        .then(service => {
-          customService = service;
+        .then(device => { return device.gatt.connect() })
+        .then(server => { return server.getPrimaryService(BACKGROUND_COLOR_SERVICE_ID) })
+        .then(service => { return service.getCharacteristics() })
+        .then(characteristics => {          
+          promises = [];
+          
+          characteristics.forEach(function(characteristic) {
+            redChannelCharacteristic = characteristic;
 
-          return Promise.all([
-            service.getCharacteristic('f21bd22e-be20-4e3b-f49b-4b94a90979b7')
-            .then(handleCustomCharacteristic)
-          ])
-          // // Step 4: get the Characteristic
-          // return service.getCharacteristic('f21bd22e-be20-4e3b-f49b-4b94a90979b7');
+            promises.push(characteristic.readValue().then(value => { return value.getUint8(0) }))
+          })
+
+          return Promise.all(promises)
         })
-        // .then(function(characteristic) {
-        //   console.log('characteristic');
-        //   console.log(characteristic);
-
-        //   heartRateCharacteristic = characteristic;
-        //   heartRateCharacteristic.addEventListener('characteristicvaluechanged',
-        //     handleHeartRateChanged);
-
-        //   heartRateCharacteristic.readValue()
-        //   .then( function (value) {
-        //     console.log('fede1');
-        //     console.log(value);
-        //     console.log('fede');
-        //   });
-
-        //   heartRateCharacteristic.startNotifications();
-        //   // Step 5: Write to the characteristic
-        //   // var data = new Uint8Array([0xbb, 0x25, 0x05, 0x44]);
-        //   // return characteristic.writeValue(data);
-        // })
+        .then(values => {
+          document.body.style.background = 'rgb(' + values.join(', ') + ')';
+        })
         .catch(function(error) {
           // And of course: error handling!
           console.error('Connection failed!', error);
         });
-
-        // console.log('finished!');
       }
     </script>
   </body>
